@@ -101,6 +101,9 @@ def read_ws(ws, client):
         while True:
             msg = ws.receive()
             if msg:
+                if (msg == "clear"):
+                    myWorld.clear()
+                    send_all("clear")
                 msg = json.loads(msg)
                 myWorld.set(msg["entity"], msg["data"])
                 send_all_json(msg)
@@ -160,7 +163,8 @@ def get_entity(entity):
 @app.route("/clear", methods=['POST','GET'])
 def clear():
     '''Clear the world out!'''
-    return myWorld.clear()
+    myWorld.clear()
+    return None
 
 
 

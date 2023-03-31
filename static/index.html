@@ -22,9 +22,14 @@
     "/>
     <script src="json2.js"></script>
   </head> 
-  <body bgcolor="white" height="100%" width="100%"> 
+  <style>
+    #c {
+        background-color: antiquewhite;
+    }
+  </style>
+  <body bgcolor="white" height="100%" width="100%">
     <div id="debug"></div>
-    <canvas id="c" width="100%" height="100%" style="-webkit-tap-highlight-color: transparent;"></canvas> 
+    <canvas id="c" width="100%" height="100%"></canvas> 
 
     <script>
 
@@ -42,26 +47,32 @@ var id = "";
 for (let i = 0; i < 3; ++i){
     id += chars[Math.floor( Math.random()*chars.length )];
 }
+//Colours by Marlee (https://colorswall.com/users/2992) @ https://colorswall.com/palette/189153
+let colours = ["#ff9f8c", "#ffd493", "#ffffad", "#18ffb1", "#9affff", "#a9bcff", "#ffbdda", "#FFFFFF"];
+var gelpen = colours[Math.floor(Math.random()*colours.length)]
 
 function debug(str) {
     var debugDiv = document.getElementById('debug');
     debugDiv.innerHTML = "" + str;
 }
-debug("Test");
+debug("Refresh to change colours");
 
 world = {};
 
-var xhr = new XMLHttpRequest();
-xhr.onreadystatechange = function() {
-    if (xhr.readyState == XMLHttpRequest.DONE) {
-        existingWorld = JSON.parse(xhr.responseText);
+var world_req = new XMLHttpRequest();
+world_req.onreadystatechange = function() {
+    if (world_req.readyState == XMLHttpRequest.DONE) {
+        existingWorld = JSON.parse(world_req.responseText);
         world = existingWorld;
     }
 }
-xhr.open("GET", "http://"+host+"/world", true);
-xhr.setRequestHeader("Content-type", "application/json");
-xhr.send();
+world_req.open("GET", "http://"+host+"/world", true);
+world_req.setRequestHeader("Content-type", "application/json");
+world_req.send();
 
+const clear = () => {
+    socket.send("clear");
+}
 
 //XXX: TODO Make this prettier!
 function drawCircle(context,entity) {
@@ -72,15 +83,14 @@ function drawCircle(context,entity) {
         var y = entity["y"];
         //moveTo(x,y);
         fillStyle = entity["colour"];
-        strokeStyle = fillStyle;
         arc(x, y, (entity["radius"])?entity["radius"]:50, 0, 2.0 * Math.PI, false);  
-        stroke();                                
+        fill();                                
     }
 }
 
 function prepEntity(entity) {
     if (!entity["colour"]) {
-        entity["colour"] = "#FF0000";
+        entity["colour"] = "#FFFFFF";
     }
     if (!entity["radius"]) {
         entity["radius"] = 50;
@@ -142,9 +152,7 @@ function getPosition(e) {
 
 function addEntity(entity, data) {
     world[entity] = data;
-    if (entity.slice(0,3) == id){
-        socket.send(JSON.stringify({"entity": entity, "data": data}));
-    }
+    socket.send(JSON.stringify({"entity": entity, "data": data}));
 }
 var counter = 0;
 function addEntityWithoutName(data) {
@@ -252,15 +260,15 @@ mouse = (function() {
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    addEntityWithoutName({'x':x,'y':y,'colour':gelpen, 'radius':12});
 });
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    addEntityWithoutName({'x':x,'y':y,'colour':gelpen, 'radius':12});
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'green',
+    addEntityWithoutName({'x':x,'y':y,'colour':gelpen,
                           'radius':10});
 });
 
@@ -280,6 +288,9 @@ function wsSetup() {
 
     socket.onmessage = function(event) {
         msg = event.data;
+        if (msg == "clear") {
+            world = {};
+        }
         msg = JSON.parse(msg)
         if (msg["entity"].slice(0,3) != id){
             addEntity(msg["entity"], msg["data"]);
@@ -307,5 +318,5 @@ wsSetup();
 setInterval( update, 1000/30.0);
 
     </script>
-</body>
+    </body>
 </html>
