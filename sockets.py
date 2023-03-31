@@ -16,15 +16,15 @@
 import flask
 from flask import Flask, request
 from flask_sockets import Sockets
-import gevent
-from gevent import queue
-import time
 import json
-import os
 
 app = Flask(__name__)
-sockets = Sockets(app)
 app.debug = True
+app.config['SECRET_KEY'] = 'IsItReallyThatSecretThough'
+
+socket = Sockets(app)
+
+print("Setup started")
 
 class World:
     def __init__(self):
@@ -59,7 +59,8 @@ class World:
     def world(self):
         return self.space
 
-myWorld = World()        
+myWorld = World() 
+print("World created")       
 
 def set_listener( entity, data ):
     ''' do something with the update ! '''
@@ -69,20 +70,25 @@ myWorld.add_set_listener( set_listener )
 @app.route('/')
 def hello():
     '''Return something coherent here.. perhaps redirect to /static/index.html '''
-    return None
+    print("Hello")
+    return flask.redirect("./static/index.html")
 
 def read_ws(ws,client):
     '''A greenlet function that reads from the websocket and updates the world'''
     # XXX: TODO IMPLEMENT ME
     return None
 
-@sockets.route('/subscribe')
+@socket.route("/subscribe")
 def subscribe_socket(ws):
     '''Fufill the websocket URL of /subscribe, every update notify the
        websocket and read updates from the websocket '''
     # XXX: TODO IMPLEMENT ME
+    print("Entering While")
+    while True:
+        msg = ws.receive()
+        print(msg)
+        ws.send(msg)
     return None
-
 
 # I give this to you, this is how you get the raw body/data portion of a post in flask
 # this should come with flask but whatever, it's not my project.
@@ -104,25 +110,21 @@ def update(entity):
 @app.route("/world", methods=['POST','GET'])    
 def world():
     '''you should probably return the world here'''
-    return None
+    return myWorld
 
 @app.route("/entity/<entity>")    
 def get_entity(entity):
     '''This is the GET version of the entity interface, return a representation of the entity'''
-    return None
+    return myWorld.get(entity)
 
 
 @app.route("/clear", methods=['POST','GET'])
 def clear():
     '''Clear the world out!'''
-    return None
+    return myWorld.clear()
 
 
 
 if __name__ == "__main__":
-    ''' This doesn't work well anymore:
-        pip install gunicorn
-        and run
-        gunicorn -k flask_sockets.worker sockets:app
-    '''
+
     app.run()
