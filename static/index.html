@@ -36,6 +36,13 @@ var H = canvas.height = window.innerHeight-50;
 var wscounter = 0;
 var socket;
 
+//Differentiate Browser users
+let chars = "QWERTYUIOPASDFGHJKLZXCVBNM1234567890qwertyuiopasdfghjklzxcvbnm"
+var id = ""; 
+for (let i = 0; i < 3; ++i){
+    id += chars[Math.floor( Math.random()*chars.length )];
+}
+
 function debug(str) {
     var debugDiv = document.getElementById('debug');
     debugDiv.innerHTML = "" + str;
@@ -43,6 +50,18 @@ function debug(str) {
 debug("Test");
 
 world = {};
+
+var xhr = new XMLHttpRequest();
+xhr.onreadystatechange = function() {
+    if (xhr.readyState == XMLHttpRequest.DONE) {
+        existingWorld = JSON.parse(xhr.responseText);
+        world = existingWorld;
+    }
+}
+xhr.open("GET", "http://"+host+"/world", true);
+xhr.setRequestHeader("Content-type", "application/json");
+xhr.send();
+
 
 //XXX: TODO Make this prettier!
 function drawCircle(context,entity) {
@@ -123,12 +142,14 @@ function getPosition(e) {
 
 function addEntity(entity, data) {
     world[entity] = data;
-    drawNextFrame(); // (but should we?)
-    //XXX: Send a XHTML Request that updates the entity you just modified!
+    if (entity.slice(0,3) == id){
+        socket.send(JSON.stringify({"entity": entity, "data": data}));
+    }
 }
 var counter = 0;
 function addEntityWithoutName(data) {
-    var name = "X"+(counter++)%100;
+    //var name = "X"+Math.floor((Math.random()*100)+1);
+    var name = id+(counter++)%500;
     addEntity(name,data);
 }
 
@@ -254,27 +275,29 @@ function wsSetup() {
  
     socket = new WebSocket(url);
     socket.onopen = function(e) {
-        alert("[open] Connection established");
-        alert("Sending to server");
-        socket.send("My name is John");
+        
     };
 
     socket.onmessage = function(event) {
-    alert(`[message] Data received from server: ${event.data}`);
+        msg = event.data;
+        msg = JSON.parse(msg)
+        if (msg["entity"].slice(0,3) != id){
+            addEntity(msg["entity"], msg["data"]);
+        }
+        drawNextFrame();
+        
     };
 
     socket.onclose = function(event) {
     if (event.wasClean) {
-        alert(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+        console.log("Connection closed");
     } else {
-        // e.g. server process killed or network down
-        // event.code is usually 1006 in this case
-        alert('[close] Connection died'+ event.reason);
+        console.log("Connection died");
     }
     };
 
     socket.onerror = function(error) {
-    alert(error.type);
+        console.log("Error occured: ", error);
     }; 
 }
 
